@@ -38,6 +38,7 @@ fixtures/sensitive/
 *.sw?
 .DS_Store
 Thumbs.db
+JULES_REPORT.md
 
 # Test coverage
 coverage/
