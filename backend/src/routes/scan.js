@@ -1,8 +1,23 @@
 import express from 'express';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 import { parseEmailInput, EmailParseError } from '../services/emailParser.js';
+import { classifyEmailWithAI, AIClassificationError } from '../services/ai/aiService.js';
 
 const router = express.Router();
+
+// Rate limiter: 50 requests per 15 minutes per IP (disabled during automated testing)
+const scanRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: {
+    error: 'Rate limit exceeded: maximum 50 scan requests allowed per 15 minutes per IP address',
+    code: 'RATE_LIMIT_EXCEEDED'
+  }
+});
 
 // Configure Multer for streaming memory storage with a strict 5MB limit
 const upload = multer({
@@ -11,7 +26,6 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5 Megabytes
   },
   fileFilter: (req, file, cb) => {
-    // Accept .eml, text/plain, message/rfc822, application/octet-stream
     const allowedMimeTypes = [
       'message/rfc822',
       'text/plain',
@@ -39,17 +53,34 @@ function generateRequestId() {
 }
 
 /**
+ * Helper to execute AI scoring and build response
+ */
+async function processParsedEmail(parsedEmail, providerPreference, allowMock = false) {
+  const aiResult = await classifyEmailWithAI(parsedEmail, {
+    provider: providerPreference,
+    allowMock: allowMock || process.env.NODE_ENV === 'test'
+  });
+
+  return {
+    risk_score: aiResult.risk_score,
+    verdict: aiResult.verdict,
+    tactics_detected: aiResult.tactics_detected,
+    explanation: aiResult.explanation,
+    safe_summary: aiResult.safe_summary,
+    metadata: parsedEmail.metadata,
+    heuristics: parsedEmail.heuristics,
+    security_headers: parsedEmail.securityHeaders,
+    ai_metadata: aiResult.ai_metadata
+  };
+}
+
+/**
  * POST /api/scan
  * Accepts:
  *  1. Multipart/form-data with 'file' field (.eml or text)
- *  2. Application/json with { email_text: "..." } or { raw_email: "..." }
- * Rejects:
- *  - Any other Content-Type -> 415 Unsupported Media Type
- *  - File > 5MB -> 413 Payload Too Large (enforced at Multer layer)
- *  - Empty content -> 400 Bad Request
- *  - Malformed content -> 400 / 422
+ *  2. Application/json with { email_text: "...", provider: "claude" | "openai" | "gemini" | "auto" }
  */
-router.post('/scan', (req, res) => {
+router.post('/scan', scanRateLimiter, (req, res) => {
   const requestId = generateRequestId();
   const contentType = req.headers['content-type'] || '';
 
@@ -102,18 +133,30 @@ router.post('/scan', (req, res) => {
       try {
         const parsedEmail = await parseEmailInput(req.file.buffer);
 
+        // Check if intermediate heuristics only requested
+        if (req.query?.heuristics_only === 'true') {
+          return res.status(200).json({
+            success: true,
+            requestId,
+            mode: 'intermediate_heuristics',
+            data: parsedEmail
+          });
+        }
+
+        const provider = req.body?.provider || req.query?.provider || 'auto';
+        const scanResult = await processParsedEmail(parsedEmail, provider, Boolean(req.query?.allow_mock));
+
         return res.status(200).json({
           success: true,
           requestId,
-          mode: 'intermediate_heuristics',
-          data: parsedEmail
+          data: scanResult
         });
-      } catch (parseErr) {
-        console.error(`[${requestId}] Parse error:`, parseErr.message);
-        const statusCode = parseErr.statusCode || 400;
+      } catch (scanErr) {
+        console.error(`[${requestId}] Scan error:`, scanErr.message);
+        const statusCode = scanErr.statusCode || 400;
         return res.status(statusCode).json({
-          error: parseErr.message || 'Malformed email structure',
-          code: parseErr.code || 'MALFORMED_EMAIL_STRUCTURE',
+          error: scanErr.message || 'Error processing email scan',
+          code: scanErr.code || 'SCAN_FAILED',
           requestId
         });
       }
@@ -145,18 +188,29 @@ router.post('/scan', (req, res) => {
 
       const parsedEmail = await parseEmailInput(emailContent);
 
+      if (req.query?.heuristics_only === 'true') {
+        return res.status(200).json({
+          success: true,
+          requestId,
+          mode: 'intermediate_heuristics',
+          data: parsedEmail
+        });
+      }
+
+      const provider = req.body?.provider || req.query?.provider || 'auto';
+      const scanResult = await processParsedEmail(parsedEmail, provider, Boolean(req.query?.allow_mock));
+
       return res.status(200).json({
         success: true,
         requestId,
-        mode: 'intermediate_heuristics',
-        data: parsedEmail
+        data: scanResult
       });
-    } catch (parseErr) {
-      console.error(`[${requestId}] Parse error:`, parseErr.message);
-      const statusCode = parseErr.statusCode || 400;
+    } catch (scanErr) {
+      console.error(`[${requestId}] Scan error:`, scanErr.message);
+      const statusCode = scanErr.statusCode || 400;
       return res.status(statusCode).json({
-        error: parseErr.message || 'Malformed email input',
-        code: parseErr.code || 'MALFORMED_EMAIL_STRUCTURE',
+        error: scanErr.message || 'Error processing email scan',
+        code: scanErr.code || 'SCAN_FAILED',
         requestId
       });
     }

@@ -23,7 +23,7 @@ describe('API Route: POST /api/scan', () => {
     }
   });
 
-  it('should accept valid JSON raw text scan and return heuristics', async () => {
+  it('should accept valid JSON raw text scan and return complete AI classification and heuristics', async () => {
     const rawEmail = `From: support@paypa1.com
 To: victim@company.com
 Subject: Account Verification Needed
@@ -39,9 +39,27 @@ Please verify your billing details here: https://paypa1.com/update
     assert.equal(res.status, 200);
     const data = await res.json();
     assert.equal(data.success, true);
-    assert.equal(data.mode, 'intermediate_heuristics');
     assert.ok(data.requestId, 'Response must include requestId');
+    assert.ok(typeof data.data.risk_score === 'number', 'Risk score must be a number');
+    assert.ok(['safe', 'suspicious', 'phishing'].includes(data.data.verdict));
+    assert.ok(Array.isArray(data.data.tactics_detected));
+    assert.ok(typeof data.data.explanation === 'string');
+    assert.ok(typeof data.data.safe_summary === 'string');
     assert.ok(data.data.heuristics.lookalikeCount >= 1, 'Should detect paypa1.com lookalike');
+    assert.ok(data.data.ai_metadata, 'Response must include ai_metadata');
+  });
+
+  it('should support heuristics_only query param for intermediate output', async () => {
+    const rawEmail = `From: admin@company.com\nSubject: Test\nBody`;
+    const res = await fetch(`${baseUrl}/api/scan?heuristics_only=true`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email_text: rawEmail })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.mode, 'intermediate_heuristics');
   });
 
   it('should reject non-JSON and non-multipart Content-Type with HTTP 415', async () => {
