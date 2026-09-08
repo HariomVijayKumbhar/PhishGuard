@@ -3,6 +3,14 @@ import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { parseEmailInput, EmailParseError } from '../services/emailParser.js';
 import { classifyEmailWithAI, AIClassificationError } from '../services/ai/aiService.js';
+import { optionalAuth, requireAuth } from '../middleware/auth.js';
+import {
+  saveScanRecord,
+  getUserScans,
+  getScanById,
+  getUserMetrics,
+  isSupabaseConfigured
+} from '../services/supabaseClient.js';
 
 const router = express.Router();
 
@@ -53,15 +61,99 @@ function generateRequestId() {
 }
 
 /**
- * Helper to execute AI scoring and build response
+ * Extract indicators list from parsed email heuristics for persistence
  */
-async function processParsedEmail(parsedEmail, providerPreference, allowMock = false) {
+function extractIndicators(parsedEmail) {
+  const indicators = [];
+  const heuristics = parsedEmail.heuristics || {};
+
+  if (Array.isArray(heuristics.lookalike_domains)) {
+    for (const item of heuristics.lookalike_domains) {
+      indicators.push({
+        indicator_type: 'lookalike_domain',
+        detail: `Suspicious lookalike domain: "${item.original}" spoofing target "${item.brand}" (Levenshtein distance: ${item.distance})`
+      });
+    }
+  }
+
+  if (Array.isArray(heuristics.link_mismatches)) {
+    for (const item of heuristics.link_mismatches) {
+      indicators.push({
+        indicator_type: 'anchor_href_mismatch',
+        detail: `Display text points to "${item.anchorDomain}" but destination link redirects to "${item.hrefDomain}" (${item.href})`
+      });
+    }
+  }
+
+  if (Array.isArray(heuristics.ip_links)) {
+    for (const item of heuristics.ip_links) {
+      indicators.push({
+        indicator_type: 'raw_ip_link',
+        detail: `Link uses raw IP address instead of domain hostname: ${item}`
+      });
+    }
+  }
+
+  if (Array.isArray(heuristics.suspicious_attachments)) {
+    for (const item of heuristics.suspicious_attachments) {
+      indicators.push({
+        indicator_type: 'dangerous_attachment',
+        detail: `Potentially dangerous executable or script attachment detected: ${item.filename || item}`
+      });
+    }
+  }
+
+  const secHeaders = parsedEmail.securityHeaders || {};
+  if (secHeaders.spf === 'fail' || secHeaders.spf === 'softfail') {
+    indicators.push({
+      indicator_type: 'spf_failure',
+      detail: `SPF validation failed: sender IP is not authorized by sending domain policy`
+    });
+  }
+  if (secHeaders.dmarc === 'fail') {
+    indicators.push({
+      indicator_type: 'dmarc_failure',
+      detail: `DMARC alignment check failed`
+    });
+  }
+
+  return indicators;
+}
+
+/**
+ * Helper to execute AI scoring, persist if authenticated, and build response
+ */
+async function processParsedEmail(parsedEmail, providerPreference, user = null, allowMock = false) {
   const aiResult = await classifyEmailWithAI(parsedEmail, {
     provider: providerPreference,
     allowMock: allowMock || process.env.NODE_ENV === 'test'
   });
 
+  let savedRecord = null;
+
+  // Persist to database if user is authenticated and Supabase is configured
+  if (user && user.id && isSupabaseConfigured()) {
+    try {
+      const indicators = extractIndicators(parsedEmail);
+      savedRecord = await saveScanRecord({
+        userId: user.id,
+        subject: parsedEmail.metadata?.subject,
+        sender: parsedEmail.metadata?.from,
+        riskScore: aiResult.risk_score,
+        verdict: aiResult.verdict,
+        tacticsDetected: aiResult.tactics_detected,
+        explanation: aiResult.explanation,
+        safeSummary: aiResult.safe_summary,
+        aiProvider: aiResult.ai_metadata?.provider || providerPreference || 'claude',
+        indicators
+      });
+    } catch (dbErr) {
+      console.error('[Supabase Save Error]', dbErr.message);
+    }
+  }
+
   return {
+    scan_id: savedRecord?.id || null,
     risk_score: aiResult.risk_score,
     verdict: aiResult.verdict,
     tactics_detected: aiResult.tactics_detected,
@@ -80,7 +172,7 @@ async function processParsedEmail(parsedEmail, providerPreference, allowMock = f
  *  1. Multipart/form-data with 'file' field (.eml or text)
  *  2. Application/json with { email_text: "...", provider: "claude" | "openai" | "gemini" | "auto" }
  */
-router.post('/scan', scanRateLimiter, (req, res) => {
+router.post('/scan', scanRateLimiter, optionalAuth, (req, res) => {
   const requestId = generateRequestId();
   const contentType = req.headers['content-type'] || '';
 
@@ -144,7 +236,12 @@ router.post('/scan', scanRateLimiter, (req, res) => {
         }
 
         const provider = req.body?.provider || req.query?.provider || 'auto';
-        const scanResult = await processParsedEmail(parsedEmail, provider, Boolean(req.query?.allow_mock));
+        const scanResult = await processParsedEmail(
+          parsedEmail,
+          provider,
+          req.user,
+          Boolean(req.query?.allow_mock)
+        );
 
         return res.status(200).json({
           success: true,
@@ -198,7 +295,12 @@ router.post('/scan', scanRateLimiter, (req, res) => {
       }
 
       const provider = req.body?.provider || req.query?.provider || 'auto';
-      const scanResult = await processParsedEmail(parsedEmail, provider, Boolean(req.query?.allow_mock));
+      const scanResult = await processParsedEmail(
+        parsedEmail,
+        provider,
+        req.user,
+        Boolean(req.query?.allow_mock)
+      );
 
       return res.status(200).json({
         success: true,
@@ -217,4 +319,81 @@ router.post('/scan', scanRateLimiter, (req, res) => {
   })();
 });
 
+/**
+ * GET /api/scans
+ * Returns historical scans for the authenticated user
+ */
+router.get('/scans', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+    const result = await getUserScans(req.user.id, { limit, offset });
+
+    return res.status(200).json({
+      success: true,
+      scans: result.scans,
+      total: result.total,
+      limit,
+      offset
+    });
+  } catch (err) {
+    console.error('[Get Scans Error]', err.message);
+    return res.status(500).json({
+      error: 'Failed to retrieve scan history',
+      code: 'DB_FETCH_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/scans/:id
+ * Returns a single scan with its flagged indicators
+ */
+router.get('/scans/:id', requireAuth, async (req, res) => {
+  try {
+    const scanId = req.params.id;
+    const scan = await getScanById(scanId, req.user.id);
+
+    if (!scan) {
+      return res.status(404).json({
+        error: 'Scan not found or access denied',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      scan
+    });
+  } catch (err) {
+    console.error('[Get Scan Detail Error]', err.message);
+    return res.status(500).json({
+      error: 'Failed to retrieve scan details',
+      code: 'DB_FETCH_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/metrics
+ * Returns summary statistics for the authenticated user
+ */
+router.get('/metrics', requireAuth, async (req, res) => {
+  try {
+    const metrics = await getUserMetrics(req.user.id);
+    return res.status(200).json({
+      success: true,
+      metrics
+    });
+  } catch (err) {
+    console.error('[Get Metrics Error]', err.message);
+    return res.status(500).json({
+      error: 'Failed to retrieve user metrics',
+      code: 'METRICS_ERROR'
+    });
+  }
+});
+
 export default router;
+

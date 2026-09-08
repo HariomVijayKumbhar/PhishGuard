@@ -1,0 +1,176 @@
+{
+  "backend/package.json": {
+    "mtime": 1788659032.7116833,
+    "seen": 1788843272.2607276,
+    "ast_hash": "d77a6d975da3010be653f6f985a6409d",
+    "semantic_hash": "d77a6d975da3010be653f6f985a6409d"
+  },
+  "backend/src/index.js": {
+    "mtime": 1788587783.0110188,
+    "seen": 1788843272.2607343,
+    "ast_hash": "2396e28a1636a5cb355b99e8bef3fd69",
+    "semantic_hash": "2396e28a1636a5cb355b99e8bef3fd69"
+  },
+  "backend/src/middleware/auth.js": {
+    "mtime": 1788680661.6178744,
+    "seen": 1788843272.2607372,
+    "ast_hash": "081a879644d325eaba24c31fc052e90d",
+    "semantic_hash": "081a879644d325eaba24c31fc052e90d"
+  },
+  "backend/src/routes/scan.js": {
+    "mtime": 1788680746.4876106,
+    "seen": 1788843272.260739,
+    "ast_hash": "222ce0ce3e2fa9f569031d0b3ee1bbe2",
+    "semantic_hash": "222ce0ce3e2fa9f569031d0b3ee1bbe2"
+  },
+  "backend/src/services/ai/aiService.js": {
+    "mtime": 1788658175.6424103,
+    "seen": 1788843272.2607405,
+    "ast_hash": "929fec4be327c006af39c84f9760064c",
+    "semantic_hash": "929fec4be327c006af39c84f9760064c"
+  },
+  "backend/src/services/ai/promptTemplates.js": {
+    "mtime": 1788656761.441101,
+    "seen": 1788843272.260742,
+    "ast_hash": "72dd1e1bdf7effe7dde9d0fc7b0c60a1",
+    "semantic_hash": "72dd1e1bdf7effe7dde9d0fc7b0c60a1"
+  },
+  "backend/src/services/ai/providers/anthropicProvider.js": {
+    "mtime": 1788656793.165354,
+    "seen": 1788843272.2607434,
+    "ast_hash": "69bdb15d43da7a4d352b17640f9441d2",
+    "semantic_hash": "69bdb15d43da7a4d352b17640f9441d2"
+  },
+  "backend/src/services/ai/providers/geminiProvider.js": {
+    "mtime": 1788658122.440235,
+    "seen": 1788843272.2607448,
+    "ast_hash": "50d8e9c4d485831a19eaca4307f6b617",
+    "semantic_hash": "50d8e9c4d485831a19eaca4307f6b617"
+  },
+  "backend/src/services/ai/providers/mockProvider.js": {
+    "mtime": 1788658146.156091,
+    "seen": 1788843272.260747,
+    "ast_hash": "29cc835020761ccc2782a4e07ea68e60",
+    "semantic_hash": "29cc835020761ccc2782a4e07ea68e60"
+  },
+  "backend/src/services/ai/providers/openaiProvider.js": {
+    "mtime": 1788656825.3185346,
+    "seen": 1788843272.2607484,
+    "ast_hash": "2a93477a43301e4a7a481c3edb7df680",
+    "semantic_hash": "2a93477a43301e4a7a481c3edb7df680"
+  },
+  "backend/src/services/ai/ragGrounding.js": {
+    "mtime": 1788656738.3418376,
+    "seen": 1788843272.2607498,
+    "ast_hash": "52551c5b0ac7a8cbb4130cb93677a4dd",
+    "semantic_hash": "52551c5b0ac7a8cbb4130cb93677a4dd"
+  },
+  "backend/src/services/emailParser.js": {
+    "mtime": 1788583364.2147684,
+    "seen": 1788843272.260751,
+    "ast_hash": "361f27ac88d3220af19b6b691be5a8d7",
+    "semantic_hash": "361f27ac88d3220af19b6b691be5a8d7"
+  },
+  "backend/src/services/supabaseClient.js": {
+    "mtime": 1788680649.977929,
+    "seen": 1788843272.2607524,
+    "ast_hash": "90515bfaaee36760e259c6577b06dbf2",
+    "semantic_hash": "90515bfaaee36760e259c6577b06dbf2"
+  },
+  "backend/src/utils/domainChecker.js": {
+    "mtime": 1788583348.62647,
+    "seen": 1788843272.2607536,
+    "ast_hash": "44dac6c16bfbebfc67cdbcbddda5de6a",
+    "semantic_hash": "44dac6c16bfbebfc67cdbcbddda5de6a"
+  },
+  "backend/supabase/migrations/20260906000000_phishguard_schema.sql": {
+    "mtime": 1788659045.5872629,
+    "seen": 1788843272.2607546,
+    "ast_hash": "ecb80cb474f95740e971989a2f952524",
+    "semantic_hash": "ecb80cb474f95740e971989a2f952524"
+  },
+  "backend/tests/aiService.test.js": {
+    "mtime": 1788658245.158948,
+    "seen": 1788843272.2607558,
+    "ast_hash": "8c252cccf57110c66bd93ba3ba3cb6f3",
+    "semantic_hash": "8c252cccf57110c66bd93ba3ba3cb6f3"
+  },
+  "backend/tests/domainChecker.test.js": {
+    "mtime": 1788583765.9263594,
+    "seen": 1788843272.260757,
+    "ast_hash": "f31ff36c1ba4c176985e19509d103af5",
+    "semantic_hash": "f31ff36c1ba4c176985e19509d103af5"
+  },
+  "backend/tests/emailParser.test.js": {
+    "mtime": 1788587650.189728,
+    "seen": 1788843272.2607582,
+    "ast_hash": "565ddcc84695a4566e6a5a31651e3852",
+    "semantic_hash": "565ddcc84695a4566e6a5a31651e3852"
+  },
+  "backend/tests/scanRoute.test.js": {
+    "mtime": 1788658287.9359615,
+    "seen": 1788843272.2607594,
+    "ast_hash": "95f90f6984832d97acf4af79b2a84320",
+    "semantic_hash": "95f90f6984832d97acf4af79b2a84320"
+  },
+  "backend/tests/supabaseAndAuth.test.js": {
+    "mtime": 1788697709.914143,
+    "seen": 1788843272.2607603,
+    "ast_hash": "adeb36091708a30f59bb6b3514e0bca5",
+    "semantic_hash": "adeb36091708a30f59bb6b3514e0bca5"
+  },
+  "frontend/package.json": {
+    "mtime": 1788574490.3146236,
+    "seen": 1788843272.2607613,
+    "ast_hash": "51dff9be6bebc2976b330340c334c992",
+    "semantic_hash": "51dff9be6bebc2976b330340c334c992"
+  },
+  "frontend/postcss.config.js": {
+    "mtime": 1788574504.7710617,
+    "seen": 1788843272.2607627,
+    "ast_hash": "ef3ba2a81ba19f8ea5ddf625521e96f0",
+    "semantic_hash": "ef3ba2a81ba19f8ea5ddf625521e96f0"
+  },
+  "frontend/src/App.jsx": {
+    "mtime": 1788574534.3459795,
+    "seen": 1788843272.2607644,
+    "ast_hash": "6a621201da96554317e97725c41afe57",
+    "semantic_hash": "6a621201da96554317e97725c41afe57"
+  },
+  "frontend/src/main.jsx": {
+    "mtime": 1788574523.434525,
+    "seen": 1788843272.2607656,
+    "ast_hash": "89fe151564e32a66fc2328f0fc92c486",
+    "semantic_hash": "89fe151564e32a66fc2328f0fc92c486"
+  },
+  "frontend/tailwind.config.js": {
+    "mtime": 1788574499.8666005,
+    "seen": 1788843272.2607667,
+    "ast_hash": "bb8e1bf5855617468f0b92eb95703669",
+    "semantic_hash": "bb8e1bf5855617468f0b92eb95703669"
+  },
+  "frontend/vite.config.js": {
+    "mtime": 1788574495.1493182,
+    "seen": 1788843272.2607677,
+    "ast_hash": "74a6ce0827d195af0fb5e58b11ef9062",
+    "semantic_hash": "74a6ce0827d195af0fb5e58b11ef9062"
+  },
+  "docs/README.md": {
+    "mtime": 1788573633.1816971,
+    "seen": 1788843272.2607694,
+    "ast_hash": "a3c2d2fba56d7c0d992ebaaacd245eb6",
+    "semantic_hash": "a3c2d2fba56d7c0d992ebaaacd245eb6"
+  },
+  "docs/THREAT_MODEL.md": {
+    "mtime": 1788573647.2758446,
+    "seen": 1788843272.2607703,
+    "ast_hash": "587d1e21f30562bc558dc2e96dae8d2d",
+    "semantic_hash": "587d1e21f30562bc558dc2e96dae8d2d"
+  },
+  "docs/architecture.md": {
+    "mtime": 1788573640.2521617,
+    "seen": 1788843272.2607715,
+    "ast_hash": "7f202d49b31ffbfb9a1f053b85307d71",
+    "semantic_hash": "7f202d49b31ffbfb9a1f053b85307d71"
+  }
+}
