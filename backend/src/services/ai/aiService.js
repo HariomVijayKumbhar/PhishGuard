@@ -1,6 +1,8 @@
 import { callAnthropicClaude } from './providers/anthropicProvider.js';
 import { callOpenAI } from './providers/openaiProvider.js';
 import { callGoogleGemini } from './providers/geminiProvider.js';
+import { callGroq } from './providers/groqProvider.js';
+import { callOpenRouter } from './providers/openrouterProvider.js';
 import { callMockAI } from './providers/mockProvider.js';
 import { retrieveRelevantGroundingPatterns } from './ragGrounding.js';
 
@@ -91,6 +93,10 @@ export async function classifyEmailWithAI(parsedEmail, options = {}) {
       case 'gemini':
       case 'google':
         return await callGoogleGemini(parsedEmail, groundingPatterns);
+      case 'groq':
+        return await callGroq(parsedEmail, groundingPatterns);
+      case 'openrouter':
+        return await callOpenRouter(parsedEmail, groundingPatterns);
       case 'mock':
         return await callMockAI(parsedEmail, groundingPatterns);
       case 'auto':
@@ -105,12 +111,18 @@ export async function classifyEmailWithAI(parsedEmail, options = {}) {
         if (process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes('your_gemini_api_key')) {
           return await callGoogleGemini(parsedEmail, groundingPatterns);
         }
+        if (process.env.GROQ_API_KEY && !process.env.GROQ_API_KEY.includes('your_groq_api_key')) {
+          return await callGroq(parsedEmail, groundingPatterns);
+        }
+        if (process.env.OPENROUTER_API_KEY && !process.env.OPENROUTER_API_KEY.includes('your_openrouter_api_key')) {
+          return await callOpenRouter(parsedEmail, groundingPatterns);
+        }
         // If in test mode or no keys configured, fall back to mock
         if (process.env.NODE_ENV === 'test' || options.allowMock) {
           return await callMockAI(parsedEmail, groundingPatterns);
         }
         throw new AIClassificationError(
-          'No AI provider API key configured (ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY required).',
+          'No AI provider API key configured (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY required).',
           'AI_PROVIDER_NOT_CONFIGURED',
           503
         );

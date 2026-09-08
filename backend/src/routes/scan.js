@@ -170,7 +170,7 @@ async function processParsedEmail(parsedEmail, providerPreference, user = null, 
  * POST /api/scan
  * Accepts:
  *  1. Multipart/form-data with 'file' field (.eml or text)
- *  2. Application/json with { email_text: "...", provider: "claude" | "openai" | "gemini" | "auto" }
+ *  2. Application/json with { email_text: "...", provider: "claude" | "openai" | "gemini" | "groq" | "openrouter" | "auto" }
  */
 router.post('/scan', scanRateLimiter, optionalAuth, (req, res) => {
   const requestId = generateRequestId();

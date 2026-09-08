@@ -119,3 +119,39 @@ describe('AI Layer - JSON Cleaning & Schema Validation', () => {
     );
   });
 });
+
+describe('AI Layer - Groq & OpenRouter Providers', () => {
+  it('should throw clear error when GROQ_API_KEY is not configured', async () => {
+    const originalKey = process.env.GROQ_API_KEY;
+    delete process.env.GROQ_API_KEY;
+
+    await assert.rejects(
+      async () => {
+        await classifyEmailWithAI(
+          { metadata: {}, content: { textBody: 'test' }, securityHeaders: {}, heuristics: {} },
+          { provider: 'groq' }
+        );
+      },
+      /GROQ_API_KEY is not configured/
+    );
+
+    if (originalKey) process.env.GROQ_API_KEY = originalKey;
+  });
+
+  it('should throw clear error when OPENROUTER_API_KEY is not configured', async () => {
+    const originalKey = process.env.OPENROUTER_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
+
+    await assert.rejects(
+      async () => {
+        await classifyEmailWithAI(
+          { metadata: {}, content: { textBody: 'test' }, securityHeaders: {}, heuristics: {} },
+          { provider: 'openrouter' }
+        );
+      },
+      /OPENROUTER_API_KEY is not configured/
+    );
+
+    if (originalKey) process.env.OPENROUTER_API_KEY = originalKey;
+  });
+});

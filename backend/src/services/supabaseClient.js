@@ -44,10 +44,134 @@ export function isSupabaseConfigured() {
   return Boolean(getSupabaseAdmin());
 }
 
+// In-memory user store for dev fallback when Supabase is unconfigured
+const devUsersStore = new Map();
+
+/**
+ * Register a new user with email and password
+ */
+export async function signUpUser({ email, password }) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Supabase client is not configured on the backend');
+    }
+    // Dev fallback
+    if (devUsersStore.has(email)) {
+      throw new Error('User already registered with this email');
+    }
+    const fakeId = `dev_user_${Date.now().toString(36)}`;
+    const devUser = {
+      id: fakeId,
+      email,
+      created_at: new Date().toISOString(),
+      app_metadata: { provider: 'email' },
+      user_metadata: {}
+    };
+    devUsersStore.set(email, { user: devUser, password });
+    const token = `dev_token_${Buffer.from(JSON.stringify({ user: devUser, exp: Date.now() + 86400000 })).toString('base64')}`;
+    return {
+      user: devUser,
+      session: {
+        access_token: token,
+        token_type: 'bearer',
+        expires_in: 86400
+      }
+    };
+  }
+
+  // 1. Create confirmed user via Supabase admin API
+  const { data: created, error: createError } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true
+  });
+
+  if (createError) {
+    throw new Error(createError.message);
+  }
+
+  // 2. Sign in to obtain session JWT
+  const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (sessionError) {
+    return {
+      user: created.user,
+      session: null
+    };
+  }
+
+  return {
+    user: sessionData.user,
+    session: sessionData.session
+  };
+}
+
+/**
+ * Sign in existing user with email and password
+ */
+export async function signInUser({ email, password }) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Supabase client is not configured on the backend');
+    }
+    // Dev fallback
+    const stored = devUsersStore.get(email);
+    if (!stored || stored.password !== password) {
+      throw new Error('Invalid email or password');
+    }
+    const token = `dev_token_${Buffer.from(JSON.stringify({ user: stored.user, exp: Date.now() + 86400000 })).toString('base64')}`;
+    return {
+      user: stored.user,
+      session: {
+        access_token: token,
+        token_type: 'bearer',
+        expires_in: 86400
+      }
+    };
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error || !data?.user || !data?.session) {
+    throw new Error(error?.message || 'Invalid email or password');
+  }
+
+  return {
+    user: data.user,
+    session: data.session
+  };
+}
+
 /**
  * Verify Supabase JWT token and return the authenticated user
  */
 export async function verifyUserToken(jwtToken) {
+  if (!jwtToken) {
+    throw new Error('Missing authentication token');
+  }
+
+  // Support local dev tokens when Supabase is not configured in development
+  if (jwtToken.startsWith('dev_token_') && process.env.NODE_ENV !== 'production') {
+    try {
+      const raw = Buffer.from(jwtToken.replace('dev_token_', ''), 'base64').toString('utf-8');
+      const payload = JSON.parse(raw);
+      if (payload.exp && Date.now() > payload.exp) {
+        throw new Error('Dev token expired');
+      }
+      return payload.user;
+    } catch {
+      throw new Error('Invalid development authentication token');
+    }
+  }
+
   const supabase = getSupabaseAdmin();
   if (!supabase) {
     throw new Error('Supabase client is not configured on the backend');

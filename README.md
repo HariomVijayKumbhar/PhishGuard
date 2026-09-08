@@ -29,7 +29,7 @@ phishguard/
 
 - **Frontend:** React 18, Vite, Tailwind CSS, Lucide React, Recharts
 - **Backend:** Node.js, Express, `mailparser`, `parse-domain`, `fastest-levenshtein`, `helmet`, `express-rate-limit`
-- **AI Core:** Anthropic Claude API (Structured JSON schema output with strict prompt injection boundaries)
+- **AI Core:** Multi-provider LLM engine supporting Anthropic Claude, Groq (Llama 3.3), OpenRouter, Google Gemini, and OpenAI (Structured JSON output with strict prompt injection containment)
 - **Database & Auth:** Supabase (PostgreSQL with Row Level Security + Supabase Auth)
 - **Containerization:** Docker multi-stage build, non-root user
 - **Testing:** Jest (Backend unit/integration), Vitest + React Testing Library (Frontend)

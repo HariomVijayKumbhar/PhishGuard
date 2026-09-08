@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import scanRouter from './routes/scan.js';
+import authRouter from './routes/auth.js';
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(cors({
 app.use(express.json({ limit: '5mb' }));
 
 // API Routes
+app.use('/api/auth', authRouter);
 app.use('/api', scanRouter);
 
 // Health check endpoint
