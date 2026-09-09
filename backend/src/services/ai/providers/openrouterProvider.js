@@ -21,7 +21,10 @@ export async function callOpenRouter(parsedEmail, groundingPatterns = []) {
     defaultHeaders: Object.keys(defaultHeaders).length > 0 ? defaultHeaders : undefined
   });
 
-  const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct';
+  let model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct';
+  if (!model || model.trim() === 'auto' || model === 'groq/auto' || model === 'openrouter/auto' || model.toLowerCase().endsWith('/auto')) {
+    model = 'meta-llama/llama-3.3-70b-instruct';
+  }
   const userPrompt = buildUserAnalysisPrompt(parsedEmail, groundingPatterns);
 
   const response = await client.chat.completions.create({

@@ -12,7 +12,10 @@ export async function callGroq(parsedEmail, groundingPatterns = []) {
     baseURL: 'https://api.groq.com/openai/v1'
   });
 
-  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  let model = process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
+  if (!model || model.trim() === 'auto' || model.toLowerCase().includes('auto')) {
+    model = 'openai/gpt-oss-20b';
+  }
   const userPrompt = buildUserAnalysisPrompt(parsedEmail, groundingPatterns);
 
   const response = await client.chat.completions.create({

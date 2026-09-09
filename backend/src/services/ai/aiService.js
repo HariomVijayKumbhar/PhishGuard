@@ -99,28 +99,39 @@ export async function classifyEmailWithAI(parsedEmail, options = {}) {
         return await callOpenRouter(parsedEmail, groundingPatterns);
       case 'mock':
         return await callMockAI(parsedEmail, groundingPatterns);
-      case 'auto':
-      default: {
-        // Auto: select first provider with a configured valid API key
-        if (process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY.includes('your_anthropic_api_key')) {
-          return await callAnthropicClaude(parsedEmail, groundingPatterns);
-        }
-        if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes('your_openai_api_key')) {
-          return await callOpenAI(parsedEmail, groundingPatterns);
-        }
-        if (process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes('your_gemini_api_key')) {
-          return await callGoogleGemini(parsedEmail, groundingPatterns);
-        }
-        if (process.env.GROQ_API_KEY && !process.env.GROQ_API_KEY.includes('your_groq_api_key')) {
-          return await callGroq(parsedEmail, groundingPatterns);
-        }
-        if (process.env.OPENROUTER_API_KEY && !process.env.OPENROUTER_API_KEY.includes('your_openrouter_api_key')) {
-          return await callOpenRouter(parsedEmail, groundingPatterns);
-        }
-        // If in test mode or no keys configured, fall back to mock
-        if (process.env.NODE_ENV === 'test' || options.allowMock) {
-          return await callMockAI(parsedEmail, groundingPatterns);
-        }
+      default:
+        throw new Error(`Unknown AI provider: ${providerName}`);
+    }
+  };
+
+  // Determine list of providers to try
+  const getActiveConfiguredProviders = () => {
+    const list = [];
+    if (process.env.OPENROUTER_API_KEY && !process.env.OPENROUTER_API_KEY.includes('your_openrouter_api_key')) {
+      list.push('openrouter');
+    }
+    if (process.env.GROQ_API_KEY && !process.env.GROQ_API_KEY.includes('your_groq_api_key')) {
+      list.push('groq');
+    }
+    if (process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes('your_gemini_api_key')) {
+      list.push('gemini');
+    }
+    if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes('your_openai_api_key')) {
+      list.push('openai');
+    }
+    if (process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY.includes('your_anthropic_api_key')) {
+      list.push('anthropic');
+    }
+    return list;
+  };
+
+  let providersToTry = [];
+  if (preferredProvider === 'auto') {
+    providersToTry = getActiveConfiguredProviders();
+    if (providersToTry.length === 0) {
+      if (process.env.NODE_ENV === 'test' || options.allowMock) {
+        providersToTry = ['mock'];
+      } else {
         throw new AIClassificationError(
           'No AI provider API key configured (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY required).',
           'AI_PROVIDER_NOT_CONFIGURED',
@@ -128,49 +139,52 @@ export async function classifyEmailWithAI(parsedEmail, options = {}) {
         );
       }
     }
-  };
+  } else {
+    providersToTry = [preferredProvider];
+  }
 
-  // Attempt call with 1 retry on parse failure
   let lastError = null;
-  const maxAttempts = 2;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const { rawOutput, provider, model } = await executeCall(preferredProvider);
-      const cleaned = cleanJsonOutput(rawOutput);
-
-      let parsedJson;
+  for (const provider of providersToTry) {
+    const maxAttempts = 2;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        parsedJson = JSON.parse(cleaned);
-      } catch (jsonErr) {
-        throw new Error(`Failed to parse AI response as JSON: ${jsonErr.message}`);
-      }
+        const { rawOutput, model } = await executeCall(provider);
+        const cleaned = cleanJsonOutput(rawOutput);
 
-      const validated = validateSchema(parsedJson);
-
-      return {
-        ...validated,
-        ai_metadata: {
-          provider,
-          model,
-          attempt,
-          grounding_patterns_used: groundingPatterns.map(p => p.id)
+        let parsedJson;
+        try {
+          parsedJson = JSON.parse(cleaned);
+        } catch (jsonErr) {
+          throw new Error(`Failed to parse AI response as JSON: ${jsonErr.message}`);
         }
-      };
-    } catch (err) {
-      lastError = err;
-      console.warn(`[AI Classifier] Attempt ${attempt} failed:`, err.message);
 
-      // If configuration error (missing key), fail immediately without retry
-      if (err instanceof AIClassificationError) {
-        throw err;
+        const validated = validateSchema(parsedJson);
+
+        return {
+          ...validated,
+          ai_metadata: {
+            provider,
+            model,
+            attempt,
+            grounding_patterns_used: groundingPatterns.map(p => p.id)
+          }
+        };
+      } catch (err) {
+        lastError = err;
+        console.warn(`[AI Classifier] Provider "${provider}" attempt ${attempt} failed:`, err.message);
+
+        // If explicitly requested single provider has missing credentials, abort immediately
+        if (preferredProvider !== 'auto' && err.message.includes('not configured')) {
+          throw new AIClassificationError(err.message, 'AI_PROVIDER_NOT_CONFIGURED', 503);
+        }
       }
     }
   }
 
-  // Hard-fail after retry exhausted (Never fabricate a silent default score)
+  // Hard-fail if all providers exhausted
   throw new AIClassificationError(
-    `AI classification failed after ${maxAttempts} attempts: ${lastError?.message || 'Unknown error'}`,
+    `AI classification failed after trying provider(s) [${providersToTry.join(', ')}]: ${lastError?.message || 'Unknown error'}`,
     'AI_SCHEMA_VALIDATION_FAILED',
     502
   );
