@@ -1,0 +1,178 @@
+{
+  "scenarios": [
+    {
+      "id": "ceo-fraud",
+      "title": "CEO Fraud / Business Email Compromise",
+      "difficulty": "medium",
+      "from": "Daniel Whitmore <d.whitmore@meridian-corp-ceo.net>",
+      "subject": "URGENT — Confidential Acquisition Payment",
+      "segments": [
+        {
+          "t": "text",
+          "v": "Hi Sarah,\n\nI'm boarding a flight and can't talk on the phone. "
+        },
+        {
+          "t": "susp",
+          "v": "I need you to process a wire transfer of $48,750 to a new vendor immediately.",
+          "reason": "Urgent wire request + phone unavailability are classic CEO Fraud (BEC) markers. Executives don't request payments via email under time pressure.",
+          "category": "Urgency / Secrecy"
+        },
+        {
+          "t": "text",
+          "v": "The acquisition closes today and the deal is under NDA, so "
+        },
+        {
+          "t": "susp",
+          "v": "please keep this strictly between us — do not loop in finance or legal.",
+          "reason": "Demanding secrecy and bypassing normal finance controls is the #1 red flag of Business Email Compromise.",
+          "category": "Secrecy Demand"
+        },
+        {
+          "t": "text",
+          "v": "\n\nWire details:\nBank: Meridian Vendor Escrow\nAccount: "
+        },
+        {
+          "t": "susp",
+          "v": "8431-9920-4471 (first-time beneficiary)",
+          "reason": "A first-time beneficiary with an unusual escrow account name deserves out-of-band verification.",
+          "category": "Payment Diversion"
+        },
+        {
+          "t": "text",
+          "v": "\n\nSend confirmation of the SWIFT reference to my personal email right away.\n\nDaniel"
+        },
+        {
+          "t": "susp",
+          "v": "Reply only to d.whitmore.exec@gmail.com",
+          "reason": "The reply-to is a free personal Gmail, not the corporate domain — a spoofed/compromised-executive hallmark.",
+          "category": "Reply-To Hijack"
+        }
+      ]
+    },
+    {
+      "id": "fake-invoice",
+      "title": "Fake Invoice / Payment Diversion",
+      "difficulty": "easy",
+      "from": "Billing Desk <accounts@vendor-portal-billing.io>",
+      "subject": "Invoice #INV-20841 — Updated Banking Details",
+      "segments": [
+        {
+          "t": "text",
+          "v": "Dear Accounts Payable,\n\nPlease find attached invoice INV-20841 for our February services.\n\n"
+        },
+        {
+          "t": "text",
+          "v": "Note: we have recently updated our banking information. "
+        },
+        {
+          "t": "susp",
+          "v": "All future payments must be sent to our new account at Belize offshore Bank Intl.",
+          "reason": "\"Changed banking details\" emails are the leading cause of payment-diversion fraud. Always verify via a known phone number — never the one in the email.",
+          "category": "Payment Diversion"
+        },
+        {
+          "t": "text",
+          "v": "Our previous account with First National is no longer active.\n\n"
+        },
+        {
+          "t": "susp",
+          "v": "To avoid late fees of 12%, remit payment within 24 hours.",
+          "reason": "Artificial penalties and 24-hour deadlines pressure AP staff into skipping verification.",
+          "category": "Time Pressure"
+        },
+        {
+          "t": "text",
+          "v": "Attachment: INV-20841.pdf\n\nThank you,\nVendor Billing"
+        }
+      ]
+    },
+    {
+      "id": "ransomware-drop",
+      "title": "Ransomware Delivery",
+      "difficulty": "hard",
+      "from": "HR Benefits <no-reply@company-benefits-hr.com>",
+      "subject": "Complaint Regarding Your Benefits Enrollment — Action Needed",
+      "segments": [
+        {
+          "t": "text",
+          "v": "Hello,\n\nWe received a complaint regarding your health benefits enrollment.\n\n"
+        },
+        {
+          "t": "susp",
+          "v": "The official complaint document is attached as a password-protected ZIP file.",
+          "reason": "Password-protected archives are used to bypass email malware scanners — the password is usually supplied in the email. Classic ransomware delivery.",
+          "category": "Malicious Attachment"
+        },
+        {
+          "t": "text",
+          "v": "The password is: benefits2024\n\n"
+        },
+        {
+          "t": "susp",
+          "v": "Failure to respond within 48 hours will result in termination of your enrollment.",
+          "reason": "Fear + deadline pressure is designed to stop you from forwarding the email to security or thinking critically.",
+          "category": "Fear / Threat"
+        },
+        {
+          "t": "text",
+          "v": "This message was sent by the automated HR Benefits system.\n\nHR Department"
+        },
+        {
+          "t": "susp",
+          "v": "Sent from company-benefits-hr.com (external domain)",
+          "reason": "The domain is not the company's real domain — HR would always email from the internal domain.",
+          "category": "Domain Spoof"
+        }
+      ]
+    },
+    {
+      "id": "cloud-takeover",
+      "title": "Cloud Account Takeover (MFA Reset)",
+      "difficulty": "medium",
+      "from": "Microsoft 365 <security-noreply@msoffice-verify.com>",
+      "subject": "Action Required: Re-enroll Microsoft Authenticator",
+      "segments": [
+        {
+          "t": "text",
+          "v": "Your organization has enabled a new authentication policy.\n\n"
+        },
+        {
+          "t": "susp",
+          "v": "Your multi-factor authentication has been flagged and must be re-enrolled within 2 hours or access will be revoked.",
+          "reason": "Fear-based MFA reset demand with a tight deadline. Microsoft never forces re-enrollment via random email links.",
+          "category": "Fear / Threat"
+        },
+        {
+          "t": "text",
+          "v": "\n\nTo re-enroll: "
+        },
+        {
+          "t": "susp",
+          "v": "https://msoffice-verify.com/authenticator/reset?user=victim@corp.com",
+          "reason": "The domain 'msoffice-verify.com' is not microsoft.com — a typosquat impersonating Microsoft 365.",
+          "category": "Lookalike Domain"
+        },
+        {
+          "t": "text",
+          "v": "\n\nAlternatively, scan the attached QR code with Microsoft Authenticator to complete the reset instantly."
+        },
+        {
+          "t": "susp",
+          "v": "📎 QR attached: mfa-reset.png — scan with your phone",
+          "reason": "Quishing! QR codes move victims to unmanaged mobile devices where corporate controls are weaker. Never scan QR codes from unexpected emails.",
+          "category": "Quishing (QR Phishing)"
+        },
+        {
+          "t": "text",
+          "v": "\n\nThank you,\nMicrosoft Security Team"
+        },
+        {
+          "t": "susp",
+          "v": "Signed 'Microsoft Security Team' but sender is security-noreply@msoffice-verify.com",
+          "reason": "Display-name authority claims are worthless — the actual sending domain tells the truth.",
+          "category": "Authority Spoof"
+        }
+      ]
+    }
+  ]
+}
