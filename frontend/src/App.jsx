@@ -19,10 +19,21 @@ import {
   RefreshCw,
   Cpu,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Globe,
+  Terminal,
+  ExternalLink,
+  Eye,
+  Gamepad2,
+  QrCode
 } from 'lucide-react';
 import AuthModal from './components/AuthModal.jsx';
 import ScanHistoryModal from './components/ScanHistoryModal.jsx';
+import DefensiveActionModal from './components/DefensiveActionModal.jsx';
+import ThreatIntelModal from './components/ThreatIntelModal.jsx';
+import EmailSandboxModal from './components/EmailSandboxModal.jsx';
+import QrPhishingModal from './components/QrPhishingModal.jsx';
+import SpotThePhishLab from './components/SpotThePhishLab.jsx';
 
 export default function App() {
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -34,6 +45,14 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login');
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+
+  // New Feature Modals state
+  const [defenseModalOpen, setDefenseModalOpen] = useState(false);
+  const [threatIntelModalOpen, setThreatIntelModalOpen] = useState(false);
+  const [threatIntelUrl, setThreatIntelUrl] = useState('');
+  const [sandboxModalOpen, setSandboxModalOpen] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [labModalOpen, setLabModalOpen] = useState(false);
 
   // Scanner state
   const [inputMode, setInputMode] = useState('text'); // 'text' | 'file'
@@ -245,6 +264,54 @@ The GitHub Team`);
                 </span>
               )}
             </div>
+
+            {/* Spot the Phish Training Lab launcher (open to everyone) */}
+            <button
+              type="button"
+              onClick={() => setLabModalOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 text-violet-300 rounded-xl text-xs font-semibold transition-all shadow-sm"
+              title="Test your phishing-detection instincts in the gamified training lab"
+            >
+              <Gamepad2 className="w-3.5 h-3.5 text-violet-400" />
+              <span>Spot the Phish</span>
+            </button>
+
+            {/* Quishing QR scanner launcher (members-only) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!user) {
+                  setAuthModalMode('login');
+                  setAuthModalOpen(true);
+                  return;
+                }
+                setQrModalOpen(true);
+              }}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-300 rounded-xl text-xs font-semibold transition-all shadow-sm"
+              title={user ? 'Scan a QR code screenshot for phishing (Quishing)' : 'Sign in required to use the Quishing Scanner'}
+            >
+              <QrCode className="w-3.5 h-3.5 text-fuchsia-400" />
+              <span>{user ? 'QR Scanner' : '🔒 QR Scanner'}</span>
+            </button>
+
+            {/* Quick Threat Intel Tool Launcher */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!user) {
+                  setAuthModalMode('login');
+                  setAuthModalOpen(true);
+                  return;
+                }
+                setThreatIntelUrl('');
+                setThreatIntelModalOpen(true);
+              }}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-xl text-xs font-semibold transition-all shadow-sm"
+              title={user ? 'Inspect any suspicious URL or domain directly' : 'Sign in required to use the Threat Intel Tool'}
+            >
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{user ? 'Threat Intel Tool' : '🔒 Threat Intel'}</span>
+            </button>
 
             {/* Auth Buttons / User Profile */}
             {user ? (
@@ -511,6 +578,72 @@ Click here: http://paypa1.com/login"
                           />
                         </div>
                       </div>
+
+                      {/* Threat Sandbox launcher — prominent full-width (requires login) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!user) {
+                            setAuthModalMode('login');
+                            setAuthModalOpen(true);
+                            return;
+                          }
+                          setSandboxModalOpen(true);
+                        }}
+                        className={`w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all mb-2 ${
+                          user
+                            ? 'bg-gradient-to-r from-purple-600/20 via-fuchsia-600/15 to-indigo-600/20 hover:from-purple-600/30 hover:to-indigo-600/30 text-purple-200 border border-purple-500/40 shadow-md shadow-purple-500/20'
+                            : 'bg-slate-800/60 text-slate-400 border border-slate-700 cursor-pointer hover:bg-slate-800'
+                        }`}
+                        title={user
+                          ? 'Safely preview the email with interactive color-coded threat overlays — all links neutralized'
+                          : 'Sign in required to use the Threat Sandbox'}
+                      >
+                        {user ? (
+                          <Eye className="w-4 h-4 text-purple-300 shrink-0" />
+                        ) : (
+                          <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                        )}
+                        <span>{user ? '🔬 Open Threat Sandbox' : '🔒 Sign in to use Threat Sandbox'}</span>
+                      </button>
+
+                      {/* Quick Action Defense Buttons */}
+                      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-800/80">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!user) {
+                              setAuthModalMode('login');
+                              setAuthModalOpen(true);
+                              return;
+                            }
+                            setDefenseModalOpen(true);
+                          }}
+                          className="py-2.5 px-3 bg-gradient-to-r from-rose-500/20 to-rose-600/20 hover:from-rose-500/30 hover:to-rose-600/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                          title={user ? 'Open SOC Incident Response, Defanged IOCs & Blocklist Rules' : 'Sign in required to use the SOC Action Kit'}
+                        >
+                          <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+                          <span>{user ? 'SOC Action Kit' : '🔒 Sign in for SOC Kit'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!user) {
+                              setAuthModalMode('login');
+                              setAuthModalOpen(true);
+                              return;
+                            }
+                            const candidateUrl = scanResult.heuristics?.analyzedLinks?.[0]?.url || '';
+                            setThreatIntelUrl(candidateUrl);
+                            setThreatIntelModalOpen(true);
+                          }}
+                          className="py-2.5 px-3 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 hover:from-cyan-500/30 hover:to-blue-600/30 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                          title={user ? 'Inspect live URL threat intelligence, redirects & DNS/MX records' : 'Sign in required to use Threat Intel'}
+                        >
+                          <Globe className="w-4 h-4 text-cyan-400 shrink-0" />
+                          <span>{user ? 'Threat Intel' : '🔒 Sign in for Intel'}</span>
+                        </button>
+                      </div>
                     </div>
                   );
                 })()}
@@ -551,8 +684,14 @@ Click here: http://paypa1.com/login"
 
                 {/* Heuristic Flagged Indicators */}
                 {scanResult.heuristics && (
-                  <div className="space-y-2 pt-2 border-t border-slate-800/80 text-xs">
+                  <div className="space-y-3 pt-2 border-t border-slate-800/80 text-xs">
                     <h4 className="font-semibold text-slate-300">Heuristic Signals</h4>
+                    {scanResult.heuristics.qrCodesFound > 0 && (
+                      <div className="p-3 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/30 text-[11px] text-fuchsia-200 flex items-center gap-2">
+                        <QrCode className="w-4 h-4 text-fuchsia-400 shrink-0" />
+                        <span><strong>{scanResult.heuristics.qrCodesFound}</strong> QR code{scanResult.heuristics.qrCodesFound !== 1 ? 's' : ''} detected in embedded image{scanResult.heuristics.qrCodesFound !== 1 ? 's' : ''} — scanned in-memory by the Quishing engine.</span>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
                       <div className="p-2 rounded-lg bg-slate-950 border border-slate-800">
                         <span className="text-slate-500 block">Lookalikes</span>
@@ -563,6 +702,44 @@ Click here: http://paypa1.com/login"
                         <span className="text-white font-bold">{scanResult.heuristics.anchorMismatchCount || 0}</span>
                       </div>
                     </div>
+
+                    {/* Observed Links list with quick Inspect action */}
+                    {scanResult.heuristics.analyzedLinks && scanResult.heuristics.analyzedLinks.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                          <span>Observed Links ({scanResult.heuristics.analyzedLinks.length})</span>
+                          <span className="text-slate-500">Live Intel Ready</span>
+                        </div>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {scanResult.heuristics.analyzedLinks.map((link, idx) => (
+                            <div
+                              key={idx}
+                              className="p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-2 text-[11px] font-mono"
+                            >
+                              <span className="text-slate-300 truncate max-w-[200px]" title={link.url}>
+                                {link.url}
+                              </span>
+                              <button
+                                type="button"
+                                  onClick={() => {
+                                  if (!user) {
+                                    setAuthModalMode('login');
+                                    setAuthModalOpen(true);
+                                    return;
+                                  }
+                                  setThreatIntelUrl(link.url);
+                                  setThreatIntelModalOpen(true);
+                                }}
+                                className="px-2 py-1 rounded bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-semibold flex items-center gap-1 shrink-0 transition-colors"
+                              >
+                                <Globe className="w-3 h-3 text-cyan-400" />
+                                <span>{user ? 'Inspect' : '🔒'}</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -625,6 +802,52 @@ Click here: http://paypa1.com/login"
       <ScanHistoryModal
         isOpen={historyModalOpen}
         onClose={() => setHistoryModalOpen(false)}
+        backendUrl={backendUrl}
+        token={token}
+      />
+
+      {/* SOC Defensive Action Modal */}
+      <DefensiveActionModal
+        isOpen={defenseModalOpen}
+        onClose={() => setDefenseModalOpen(false)}
+        scanResult={scanResult}
+      />
+
+      {/* Quishing QR Phishing Scanner Modal */}
+      <QrPhishingModal
+        isOpen={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        backendUrl={backendUrl}
+        token={token}
+        onInspectUrl={(url) => {
+          setThreatIntelUrl(url);
+          setThreatIntelModalOpen(true);
+        }}
+      />
+
+      {/* Spot the Phish Training Lab */}
+      <SpotThePhishLab
+        isOpen={labModalOpen}
+        onClose={() => setLabModalOpen(false)}
+      />
+
+      {/* Safe Email Threat Sandbox Modal */}
+      <EmailSandboxModal
+        isOpen={sandboxModalOpen}
+        onClose={() => setSandboxModalOpen(false)}
+        scanResult={scanResult}
+        token={token}
+        onOpenThreatIntel={(url) => {
+          setThreatIntelUrl(url);
+          setThreatIntelModalOpen(true);
+        }}
+      />
+
+      {/* Live Threat Intelligence Modal */}
+      <ThreatIntelModal
+        isOpen={threatIntelModalOpen}
+        onClose={() => setThreatIntelModalOpen(false)}
+        initialUrl={threatIntelUrl}
         backendUrl={backendUrl}
         token={token}
       />

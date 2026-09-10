@@ -94,13 +94,20 @@ export function checkLookalikeDomain(candidateRegistrableDomain, candidateDomain
     // Levenshtein on core brand name (e.g. paypa1 vs paypal)
     const coreDist = distance(candidateCore, brandCore);
 
-    if ((fullDist <= 2 && fullDist > 0) || (coreDist <= 2 && coreDist > 0 && Math.abs(candidateCore.length - brandCore.length) <= 2)) {
+    // Levenshtein on hyphen-separated labels (e.g. paypa1-verify.com → label 'paypa1' vs 'paypal')
+    const labelDist = (candidateCore.split('-')[0] || '').length > 0
+      ? distance(candidateCore.split('-')[0], brandCore)
+      : Infinity;
+
+    const effectiveMinDist = Math.min(fullDist, coreDist, labelDist);
+
+    if ((fullDist <= 2 && fullDist > 0) || (coreDist <= 2 && coreDist > 0 && Math.abs(candidateCore.length - brandCore.length) <= 2) || (labelDist <= 2 && labelDist > 0)) {
       return {
         isLookalike: true,
         brand: brand.name,
         targetDomain: brand.domain,
         candidateDomain: candidateFull,
-        distance: Math.min(fullDist, coreDist),
+        distance: effectiveMinDist,
         reason: `Domain '${candidateFull}' is visually deceptive and mimics ${brand.name} ('${brand.domain}')`
       };
     }
@@ -132,7 +139,7 @@ export function checkAnchorHrefMismatch(anchorText, actualHref) {
   const cleanHref = actualHref.trim();
 
   // If anchor text doesn't look like a URL or domain, skip
-  const isAnchorUrlLike = /^(https?:\/\/|www\.)/i.test(cleanAnchor) || 
+  const isAnchorUrlLike = /^(https?:\/\/|www\.)/i.test(cleanAnchor) ||
     /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/.*)?$/i.test(cleanAnchor);
 
   if (!isAnchorUrlLike) {
