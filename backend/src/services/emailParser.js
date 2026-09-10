@@ -2,6 +2,8 @@ import { simpleParser } from 'mailparser';
 import * as cheerio from 'cheerio';
 import sanitizeHtml from 'sanitize-html';
 import { analyzeLinks } from '../utils/domainChecker.js';
+import { annotateSandboxHtml, annotateTextBody } from './emailAnnotator.js';
+import { scanAttachmentsForQr } from './qrPhishingService.js';
 
 export class EmailParseError extends Error {
   constructor(message, code = 'PARSE_ERROR', statusCode = 400) {
@@ -183,12 +185,39 @@ export async function parseEmailInput(inputBufferOrString) {
   // Link and domain analysis
   const linkAnalysis = analyzeLinks(extractedLinks);
 
+  // Sandbox annotation — converts <a> → inert <span> with threat classification
+  const annotatedHtml = sanitizedHtml
+    ? annotateSandboxHtml(sanitizedHtml, linkAnalysis.links)
+    : '';
+
+  // Text segments for plain-text emails
+  const textSegments = !sanitizedHtml && textBody
+    ? annotateTextBody(textBody, linkAnalysis.links)
+    : [];
+
   // Security headers analysis
   const headerList = parsed.headerLines ? parsed.headerLines.map(h => [h.key, h.line]) : [];
   const securityHeaders = extractSecurityHeaders(headerList);
 
+  // Quishing detector — scan embedded image attachments for QR codes (in-memory, limited)
+  let qrFindings = [];
+  try {
+    qrFindings = await scanAttachmentsForQr(parsed.attachments || []);
+  } catch (qrErr) {
+    console.error('[QR Attachment Scan Error]', qrErr.message);
+  }
+
   // Heuristic indicator synthesis
   const indicators = [...linkAnalysis.indicators];
+
+  for (const finding of qrFindings) {
+    if (finding.analysis && finding.analysis.verdict !== 'BENIGN') {
+      indicators.push({
+        type: 'qr_code_phishing',
+        detail: `Embedded QR code in "${finding.filename}" decodes to ${finding.analysis.verdict} destination: ${finding.analysis.payload}`
+      });
+    }
+  }
 
   if (securityHeaders.spf === 'fail') {
     indicators.push({
@@ -214,6 +243,8 @@ export async function parseEmailInput(inputBufferOrString) {
     content: {
       textBody,
       sanitizedHtml,
+      annotatedHtml,
+      textSegments,
       hasHtml: Boolean(rawHtml)
     },
     securityHeaders,
@@ -223,6 +254,8 @@ export async function parseEmailInput(inputBufferOrString) {
       lookalikeCount: linkAnalysis.indicators.filter(i => i.type === 'lookalike_domain').length,
       anchorMismatchCount: linkAnalysis.indicators.filter(i => i.type === 'anchor_href_mismatch').length,
       ipLinksCount: linkAnalysis.indicators.filter(i => i.type === 'ip_address_link').length,
+      qrCodesFound: qrFindings.length,
+      qrFindings,
       flaggedIndicators: indicators,
       hasImmediateRedFlags: indicators.length > 0
     }
